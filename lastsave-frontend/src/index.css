@@ -1,0 +1,54 @@
+/* LASTSAVE mobile-friendly base styles */
+:root{
+  --ls-bg: #0f172a;
+  --ls-accent: #0ea5e9;
+  --ls-surface: #0b1220;
+}
+html,body,#root{height:100%;}
+body{
+  min-height:100%;
+  margin:0;
+  background:var(--ls-bg);
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y: none;
+}
+/* Hide scrollbars */
+*::-webkit-scrollbar{display:none}
+*{-ms-overflow-style:none;scrollbar-width:none}
+
+/* Fullscreen app container */
+.app-fullscreen{height:100vh;display:flex;flex-direction:column;}
+
+/* Touch targets */
+button, .btn, .touch-target{min-height:48px;min-width:48px;padding:12px 14px;border-radius:8px;line-height:1.1;}
+button{touch-action:manipulation}
+
+/* Ensure interactive controls have sufficient hit area */
+input, textarea, select { min-height:40px }
+
+/* Make main content scroll smoothly on mobile */
+main{ -webkit-overflow-scrolling: touch }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  @apply bg-neutral-950 text-white min-h-screen;
+}
+
+textarea {
+  @apply bg-neutral-900 border border-neutral-800 text-white;
+}

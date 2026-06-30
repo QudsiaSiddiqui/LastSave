@@ -1,0 +1,8 @@
+=== frontend_cmd ===
+npm run build
+=== frontend_exception ===
+[WinError 2] The system cannot find the file specified
+=== backend_cmd ===
+mvn -q -DskipTests package
+=== backend_exception ===
+[WinError 2] The system cannot find the file specified

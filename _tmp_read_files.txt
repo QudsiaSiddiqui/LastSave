@@ -1,0 +1,588 @@
+=== lastsave-frontend/src/App.tsx ===
+import { AnimatePresence, motion } from 'framer-motion';
+import { useLastsaveStore } from './store/lastsaveStore';
+import { HomeScreen } from './screens/HomeScreen';
+import { CrunchScreen } from './screens/CrunchScreen';
+import { SendScreen } from './screens/SendScreen';
+import { SafeScreen } from './screens/SafeScreen';
+
+function App() {
+  const currentState = useLastsaveStore((state) => state.currentState);
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-white font-inter">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentState}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.02 }}
+          transition={{ duration: 0.45, ease: 'easeInOut' }}
+        >
+          {currentState === 'HOME' && <HomeScreen />}
+          {currentState === 'CRUNCH' && <CrunchScreen />}
+          {currentState === 'SEND' && <SendScreen />}
+          {currentState === 'SAFE' && <SafeScreen />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default App;
+
+---END---
+
+=== lastsave-frontend/src/screens/HomeScreen.tsx ===
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { CalendarDays, Mic2 } from 'lucide-react';
+import { useForgeStream } from '../hooks/useForgeStream';
+import { useLastsaveStore } from '../store/lastsaveStore';
+
+const examples = [
+  'apply to stripe job',
+  'write research paper on climate change',
+  'create presentation for investor meeting',
+  'email professor about extension',
+];
+
+const calendarEvents = [
+  {
+    title: 'Investor presentation prep',
+    due: 'Today · 4:00 PM',
+    description: 'Draft slide outline for Monday pitch',
+  },
+  {
+    title: 'Research paper outline',
+    due: 'Tomorrow · 10:00 AM',
+    description: 'Finalize proposal and bibliography',
+  },
+  {
+    title: 'Follow-up email to professor',
+    due: 'Thursday · 2:00 PM',
+    description: 'Send project status and extension request',
+  },
+];
+
+export function HomeScreen() {
+  const [input, setInput] = useState('');
+  const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
+  const { error } = useLastsaveStore();
+  const { startForge } = useForgeStream();
+
+  const handleSubmit = () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    startForge(trimmed);
+  };
+
+  const handleVoiceInput = () => {
+    setVoiceError('');
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError('Voice input is not supported in this browser.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript;
+      if (transcript) {
+        setInput(transcript);
+      }
+    };
+    recognition.onerror = () => {
+      setListening(false);
+      setVoiceError('Voice capture failed. Please try again or type your task.');
+    };
+    recognition.onend = () => setListening(false);
+    recognition.start();
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 px-6 py-12">
+      <motion.div
+        className="pointer-events-none absolute inset-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.2 }}
+      >
+        <motion.span
+          className="absolute left-10 top-24 h-28 w-28 rounded-full bg-lastsave-blue/20 blur-3xl"
+          animate={{ y: [0, 20, 0] }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.span
+          className="absolute right-14 top-36 h-36 w-36 rounded-full bg-lastsave-twilight/30 blur-3xl"
+          animate={{ y: [0, -16, 0] }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
+        <motion.span
+          className="absolute left-1/2 top-1/4 h-24 w-24 -translate-x-1/2 rounded-full bg-white/10 blur-3xl"
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 9, repeat: Infinity }}
+        />
+      </motion.div>
+
+      <div className="relative mx-auto flex max-w-4xl flex-col gap-10">
+        <div className="space-y-4">
+          <p className="text-sm uppercase tracking-[0.3em] text-lastsave-blue">LASTSAVE</p>
+          <h1 className="text-5xl font-semibold leading-tight">
+            Last-minute help, forged fast.
+          </h1>
+          <p className="max-w-2xl text-neutral-400">
+            Tell the app what you need done, then watch the backend think it through and deliver a ready-to-send result.
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-neutral-800/80 bg-neutral-900/80 p-8 shadow-[0_0_60px_rgba(15,23,42,0.35)]">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="text-sm font-medium text-neutral-300">What do you need done?</label>
+            <div className="flex items-center gap-3 text-sm text-neutral-400">
+              <CalendarDays className="h-4 w-4" />
+              Mock calendar deadlines included below.
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <input
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="e.g. apply to stripe job"
+              className="w-full rounded-2xl border border-neutral-700 bg-neutral-950 px-5 py-4 text-white outline-none transition focus:border-lastsave-blue"
+            />
+            <button
+              onClick={handleVoiceInput}
+              type="button"
+              className="inline-flex items-center justify-center rounded-2xl border border-neutral-700 bg-neutral-950 px-5 py-4 text-sm text-white transition hover:border-lastsave-blue/80"
+            >
+              <Mic2 className="mr-2 h-5 w-5" />
+              {listening ? 'Listening...' : 'Voice'}
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="rounded-2xl bg-lastsave-blue px-6 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-neutral-950 transition hover:bg-blue-400"
+            >
+              LASTSAVE
+            </button>
+          </div>
+
+          {voiceError ? <p className="mt-4 text-sm text-red-400">{voiceError}</p> : null}
+          {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_0.9fr]">
+          <div className="rounded-3xl border border-neutral-800/90 bg-neutral-900/90 p-6">
+            <p className="mb-4 text-sm uppercase tracking-[0.3em] text-lastsave-blue">Examples</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {examples.map((example) => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => setInput(example)}
+                  className="rounded-3xl border border-neutral-800/90 bg-neutral-950/90 px-5 py-4 text-left text-sm text-neutral-300 transition hover:border-lastsave-blue/80 hover:text-white"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-neutral-800/90 bg-neutral-900/90 p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-lastsave-blue">Calendar</p>
+                <h2 className="mt-2 text-2xl font-semibold">Upcoming deadlines</h2>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {calendarEvents.map((event) => (
+                <div key={event.title} className="rounded-3xl border border-neutral-800/90 bg-neutral-950/80 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-semibold text-white">{event.title}</p>
+                    <span className="rounded-full bg-lastsave-blue/10 px-3 py-1 text-xs text-lastsave-blue">{event.due}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-neutral-400">{event.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+---END---
+
+=== lastsave-frontend/src/store/lastsaveStore.ts ===
+import { create } from 'zustand';
+
+type State = 'HOME' | 'CRUNCH' | 'SEND' | 'SAFE';
+
+export interface PivotPath {
+  title: string;
+  description: string;
+  action: string;
+}
+
+interface LastsaveStore {
+  currentState: State;
+  taskDescription: string;
+  reasoningSteps: Array<{ step: string; message: string }>;
+  draft: string | null;
+  confidenceScore: number | null;
+  pivotPaths: Array<PivotPath> | null;
+  error: string | null;
+
+  setTask: (description: string) => void;
+  addReasoningStep: (step: string, message: string) => void;
+  setDraft: (draft: string, confidence: number) => void;
+  setState: (state: State) => void;
+  setPivotPaths: (paths: Array<PivotPath>) => void;
+  setError: (error: string) => void;
+  reset: () => void;
+}
+
+export const useLastsaveStore = create<LastsaveStore>((set) => ({
+  currentState: 'HOME',
+  taskDescription: '',
+  reasoningSteps: [],
+  draft: null,
+  confidenceScore: null,
+  pivotPaths: null,
+  error: null,
+
+  setTask: (description) =>
+    set({
+      taskDescription: description,
+      currentState: 'CRUNCH',
+      reasoningSteps: [],
+      draft: null,
+      confidenceScore: null,
+      pivotPaths: null,
+      error: null,
+    }),
+
+  addReasoningStep: (step, message) =>
+    set((state) => ({
+      reasoningSteps: [...state.reasoningSteps, { step, message }],
+    })),
+
+  setDraft: (draft, confidence) =>
+    set({
+      draft,
+      confidenceScore: confidence,
+      currentState: 'SEND',
+    }),
+
+  setState: (currentState) => set({ currentState }),
+
+  setPivotPaths: (pivotPaths) =>
+    set({
+      pivotPaths,
+      currentState: 'SAFE',
+    }),
+
+  setError: (error) =>
+    set({
+      error,
+      currentState: 'SAFE',
+    }),
+
+  reset: () =>
+    set({
+      currentState: 'HOME',
+      taskDescription: '',
+      reasoningSteps: [],
+      draft: null,
+      confidenceScore: null,
+      pivotPaths: null,
+      error: null,
+    }),
+}));
+
+---END---
+
+=== lastsave-backend/src/main/java/com/lastsave/service/GeminiService.java ===
+package com.lastsave.service;
+
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lastsave.config.GeminiConfig;
+import com.lastsave.dto.ForgeResponse;
+import com.lastsave.dto.ReasoningStep;
+import com.lastsave.dto.TaskClassification;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Service
+public class GeminiService {
+
+    private final GeminiConfig geminiConfig;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public GeminiService(GeminiConfig geminiConfig) {
+        this.geminiConfig = geminiConfig;
+        this.webClient = WebClient.builder()
+                .baseUrl("https://generativelanguage.googleapis.com/v1beta")
+                .build();
+    }
+
+    public Flux<String> streamReasoning(String taskDescription) {
+        return Flux.create(sink -> {
+            sink.next("data: " + toJson(new ReasoningStep("classifying", "Analyzing your task type...")) + "\n\n");
+
+            classifyTask(taskDescription)
+                .flatMap(classification -> {
+                    System.out.println("Classification result: " + classification.getTaskType() + " (confidence: " + classification.getConfidence() + ")");
+                    sink.next("data: " + toJson(new ReasoningStep("analyzing", "Task identified: " + classification.getTaskType() + ". Gathering requirements...")) + "\n\n");
+                    return generateDraft(taskDescription, classification)
+                        .map(draft -> new Object[] { classification, draft });
+                })
+                .subscribe(result -> {
+                    TaskClassification classification = (TaskClassification) result[0];
+                    String draft = (String) result[1];
+
+                    sink.next("data: " + toJson(new ReasoningStep("synthesizing", "Crafting your personalized draft...")) + "\n\n");
+                    sink.next("data: " + toJson(new ForgeResponse(draft, classification.getConfidence(), classification.getTaskType())) + "\n\n");
+                    sink.complete();
+                }, error -> {
+                    System.err.println("ERROR in stream: " + error.getMessage());
+                    error.printStackTrace();
+                    sink.next("data: " + toJson(new ReasoningStep("error", "Using fallback generation: " + error.getMessage())) + "\n\n");
+                    sink.next("data: " + toJson(new ForgeResponse(generateFallbackDraft(taskDescription), 0.6, "FALLBACK")) + "\n\n");
+                    sink.complete();
+                });
+        });
+    }
+
+    private Mono<TaskClassification> classifyTask(String taskDescription) {
+        String prompt = "Classify this task into one of HIRE, CODE, DECK, THESIS, EMAIL, or UNKNOWN. "
+                + "Return only a JSON object with fields: taskType, confidence, reasoning, detectedSources, recommendedBehavior. "
+                + "Task description: \"" + taskDescription + "\".";
+
+        return callGemini(prompt)
+            .doOnNext(response -> System.out.println("RAW CLASSIFY RESPONSE: " + response.substring(0, Math.min(500, response.length()))))
+            .map(this::parseClassification);
+    }
+
+    private Mono<String> generateDraft(String taskDescription, TaskClassification classification) {
+        String prompt = buildDraftPrompt(taskDescription, classification);
+        return callGemini(prompt)
+            .doOnNext(response -> System.out.println("RAW DRAFT RESPONSE: " + response.substring(0, Math.min(500, response.length()))))
+            .map(this::extractText);
+    }
+
+    private String buildDraftPrompt(String task, TaskClassification classification) {
+        String type = classification.getTaskType();
+        return switch (type) {
+            case "HIRE" -> "Write a professional cover letter for this job application. Return ONLY the cover letter text. Task: " + task;
+            case "CODE" -> "Write a README.md for this coding project. Return ONLY the README content. Task: " + task;
+            case "DECK" -> "Write a presentation outline with speaker notes. Return ONLY the outline. Task: " + task;
+            case "THESIS" -> "Write an abstract for this research paper. Return ONLY the abstract. Task: " + task;
+            case "EMAIL" -> "Write a professional email. Return ONLY the email text. Task: " + task;
+            default -> "Help with this task. Return ONLY your response. Task: " + task;
+        };
+    }
+
+    private Mono<String> callGemini(String prompt) {
+        String apiKey = geminiConfig.getApi().getKey();
+        System.out.println("Using API key (first 10 chars): " + apiKey.substring(0, Math.min(10, apiKey.length())) + "...");
+
+        String url = "/models/gemini-2.0-flash:generateContent?key=" + apiKey;
+        String escapedPrompt = prompt.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+
+        String body = """
+            {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": "%s"
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 2048
+                }
+            }
+            """.formatted(escapedPrompt);
+
+        System.out.println("REQUEST BODY (first 200 chars): " + body.substring(0, Math.min(200, body.length())));
+
+        return webClient.post()
+                .uri(url)
+                .header("Content-Type", "application/json")
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(
+                    status -> status.isError(),
+                    response -> response.bodyToMono(String.class).map(errorBody -> {
+                        System.err.println("API ERROR BODY: " + errorBody);
+                        return new RuntimeException("Gemini API error: " + errorBody);
+                    })
+                )
+                .bodyToMono(String.class)
+                .onErrorResume(e -> {
+                    System.err.println("WEBCLIENT ERROR: " + e.getMessage());
+                    return Mono.just("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ERROR: " + e.getMessage().replace("\"", "\\\"") + "\"}]}}]}");
+                });
+    }
+
+    private TaskClassification parseClassification(String response) {
+        try {
+            System.out.println("Parsing classification from: " + response.substring(0, Math.min(300, response.length())));
+            String text = safeExtractText(response);
+            text = cleanupJsonText(text);
+            TaskClassification classification = safeReadValue(text, TaskClassification.class);
+
+            if (classification == null) {
+                classification = createFallback("safeReadValue returned null");
+            }
+
+            if (classification.getTaskType() == null || classification.getTaskType().isBlank()) {
+                classification.setTaskType(inferTaskType(text));
+            }
+
+            return classification;
+        } catch (Exception e) {
+            System.err.println("Parse error: " + e.getMessage());
+            TaskClassification fallback = createFallback(e.getMessage());
+            fallback.setTaskType(inferTaskType(response));
+            return fallback;
+        }
+    }
+
+    private String extractText(String response) {
+        try {
+            return safeExtractText(response);
+        } catch (Exception e) {
+            System.err.println("Extract error: " + e.getMessage());
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    private String safeExtractText(String response) {
+        try {
+            JsonNode root = objectMapper.readTree(response);
+
+            if (root.has("candidates") && root.get("candidates").isArray() && root.get("candidates").size() > 0) {
+                JsonNode candidate = root.get("candidates").get(0);
+
+                if (candidate.has("content")) {
+                    JsonNode content = candidate.get("content");
+                    if (content.has("parts") && content.get("parts").isArray() && content.get("parts").size() > 0) {
+                        return content.get("parts").get(0).path("text").asText();
+                    }
+                }
+
+                if (candidate.has("output")) {
+                    return candidate.get("output").asText();
+                }
+
+                if (candidate.has("message")) {
+                    JsonNode message = candidate.get("message");
+                    if (message.has("content") && message.get("content").isArray() && message.get("content").size() > 0) {
+                        return message.get("content").get(0).path("text").asText();
+                    }
+                }
+            }
+
+            if (root.has("output")) {
+                return root.get("output").asText();
+            }
+
+            if (root.has("text")) {
+                return root.get("text").asText();
+            }
+
+            return response;
+        } catch (Exception e) {
+            System.err.println("safeExtractText error: " + e.getMessage());
+            return response;
+        }
+    }
+
+    private <T> T safeReadValue(String json, Class<T> clazz) {
+        try {
+            return objectMapper.readValue(json, clazz);
+        } catch (Exception e) {
+            System.err.println("safeReadValue error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private String cleanupJsonText(String text) {
+        String cleaned = text.replaceAll("(?s)```json.*?```", "").replace("```", "").trim();
+        int startIndex = cleaned.indexOf('{');
+        int endIndex = cleaned.lastIndexOf('}');
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+            cleaned = cleaned.substring(startIndex, endIndex + 1);
+        }
+        return cleaned;
+    }
+
+    private String inferTaskType(String text) {
+        String normalized = text.toUpperCase(Locale.ROOT);
+        if (normalized.contains("HIRE") || normalized.contains("COVER LETTER") || normalized.contains("JOB") || normalized.contains("APPLICATION")) {
+            return "HIRE";
+        }
+        if (normalized.contains("CODE") || normalized.contains("README") || normalized.contains("PROJECT") || normalized.contains("GITHUB") || normalized.contains("BUG")) {
+            return "CODE";
+        }
+        if (normalized.contains("DECK") || normalized.contains("PRESENTATION") || normalized.contains("SLIDES")) {
+            return "DECK";
+        }
+        if (normalized.contains("THESIS") || normalized.contains("PAPER") || normalized.contains("RESEARCH") || normalized.contains("ABSTRACT")) {
+            return "THESIS";
+        }
+        if (normalized.contains("EMAIL") || normalized.contains("MAIL") || normalized.contains("INBOX") || normalized.contains("PROFESSOR")) {
+            return "EMAIL";
+        }
+        return "UNKNOWN";
+    }
+
+    private TaskClassification createFallback(String reason) {
+        TaskClassification fallback = new TaskClassification();
+        fallback.setTaskType("UNKNOWN");
+        fallback.setConfidence(0.5);
+        fallback.setReasoning("Fallback: " + reason);
+        fallback.setDetectedSources(List.of());
+        fallback.setRecommendedBehavior("fallback");
+        return fallback;
+    }
+
+    private String generateFallbackDraft(String task) {
+        return "Task: " + task + "\n\n[This is a fallback response. The AI service encountered an issue. Please try again.]";
+    }
+
+    private String toJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+}
+---END---
+
